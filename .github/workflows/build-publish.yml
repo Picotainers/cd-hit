@@ -1,4 +1,4 @@
-name: Build and Publish Distroless cd-hit
+name: Build and Publish cd-hit
 
 on:
   push:

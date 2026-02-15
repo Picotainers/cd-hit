@@ -1,5 +1,5 @@
 # cd-hit
-Small, distroless-when-possible container for `cd-hit`.
+Small compatibility-focused container for `cd-hit`.
 
 ## how to use
 ```bash
