@@ -1,7 +1,12 @@
 # cd-hit
-Small compatibility-focused container for `cd-hit`.
+Source-built `cd-hit` container.
 
-## how to use
+## Quick Usage
+
 ```bash
-docker run --rm -v "$(pwd):/data" picotainers/cd-hit:latest --help
+# Pull the image
+docker pull docker.io/picotainers/cd-hit:latest
+
+# Run the tool
+docker run --rm docker.io/picotainers/cd-hit:latest cd-hit --help
 ```

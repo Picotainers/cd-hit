@@ -1,34 +1,37 @@
 # syntax=docker/dockerfile:1
-# Compatibility-first template for cd-hit.
-# Installs package from Bioconda and copies the full conda runtime to avoid missing libs/interpreters.
 
-FROM mambaorg/micromamba:2.0.5-debian12-slim AS builder
+FROM debian:bookworm AS builder
 
-RUN micromamba install -y -n base -c conda-forge -c bioconda \
-    cd-hit \
-    && micromamba clean --all --yes
+ARG CD_HIT_VERSION=V4.8.1
+ARG CD_HIT_URL=https://github.com/weizhongli/cdhit/archive/refs/tags/V4.8.1.tar.gz
 
-# Resolve a runnable command for this package.
-# Prefer exact match, then underscore variant, then prefix match.
-RUN set -eux; \
-    BIN=""; \
-    if [ -x "/opt/conda/bin/cd-hit" ]; then BIN="/opt/conda/bin/cd-hit"; fi; \
-    if [ -z "$BIN" ]; then CAND="/opt/conda/bin/$(echo cd-hit | tr '-' '_')"; [ -x "$CAND" ] && BIN="$CAND" || true; fi; \
-    if [ -z "$BIN" ]; then BIN="$(find /opt/conda/bin -maxdepth 1 -type f -perm -111 -name 'cd-hit*' | head -n1 || true)"; fi; \
-    test -n "$BIN"; \
-    printf '%s\n' "$BIN" > /tmp/tool-entry-path
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      ca-certificates curl make g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM mambaorg/micromamba:2.0.5-debian12-slim
+WORKDIR /src
+RUN curl -fsSL "$CD_HIT_URL" -o cdhit.tar.gz \
+    && tar -xzf cdhit.tar.gz
 
-COPY --from=builder /opt/conda /opt/conda
-COPY --from=builder /tmp/tool-entry-path /tmp/tool-entry-path
+WORKDIR /src/cdhit-V4.8.1
+RUN make -j"$(nproc)" \
+    && test -x cd-hit \
+    && cp cd-hit /tmp/cd-hit
 
-USER root
-ENV PATH="/opt/conda/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/conda/lib:/opt/conda/lib64"
-RUN set -eux; \
-    BIN="$(cat /tmp/tool-entry-path)"; \
-    printf '#!/usr/bin/env bash\nexec "%s" "$@"\n' "$BIN" > /usr/local/bin/cd-hit
-RUN chmod +x /usr/local/bin/cd-hit && rm -f /tmp/tool-entry-path
+RUN mkdir -p /tmp/runtime-libs \
+    && (ldd /tmp/cd-hit | awk '/=> \/|^\// {for(i=1;i<=NF;i++) if ($i ~ /^\//) print $i}' | sort -u | xargs -r -I{} cp -v --parents "{}" /tmp/runtime-libs) || true
+
+FROM debian:bookworm-slim
+
+COPY --from=builder /tmp/cd-hit /usr/local/bin/cd-hit
+COPY --from=builder /tmp/runtime-libs/ /
+
+RUN chmod +x /usr/local/bin/cd-hit \
+    && printf '%s\n' '#!/bin/sh' \
+    'if [ "${1:-}" = "cd-hit" ]; then shift; fi' \
+    'exec /usr/local/bin/cd-hit "$@"' > /usr/local/bin/entrypoint.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh
+
 WORKDIR /data
-ENTRYPOINT ["/usr/local/bin/cd-hit"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
