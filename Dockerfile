@@ -21,7 +21,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-      ca-certificates libstdc++6 zlib1g \
+      ca-certificates libstdc++6 libgomp1 zlib1g \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /tmp/cd-hit /usr/local/bin/cd-hit
