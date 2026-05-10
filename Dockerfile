@@ -6,7 +6,7 @@ ARG CD_HIT_VERSION=V4.8.1
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-      ca-certificates git make g++ \
+      ca-certificates git make g++ zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
@@ -21,7 +21,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-      ca-certificates libstdc++6 \
+      ca-certificates libstdc++6 zlib1g \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /tmp/cd-hit /usr/local/bin/cd-hit
