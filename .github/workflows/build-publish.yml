@@ -24,8 +24,8 @@ jobs:
       - name: Smoke test
         run: |
           set -euo pipefail
-          docker run --rm picotainers-local/cd-hit:smoke --help > help.txt 2>&1
-          grep -Eiq 'cd-hit|usage|options|help' help.txt
+          docker run --rm picotainers-local/cd-hit:smoke --help
+          docker run --rm --entrypoint /bin/sh picotainers-local/cd-hit:smoke -c 'command -v cd-hit'
 
   publish:
     needs: test
